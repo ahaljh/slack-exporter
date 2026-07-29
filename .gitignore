@@ -1,0 +1,16 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+# 슬랙 토큰 (절대 커밋 금지)
+.env
+
+# 백업 출력물 (대화 내용/첨부파일 포함 — 커밋 금지)
+export/

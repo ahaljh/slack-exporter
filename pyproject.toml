@@ -1,0 +1,18 @@
+[project]
+name = "slack-exporter"
+version = "0.1.0"
+description = "슬랙 채널 백업 익스포터 — 메시지/스레드/첨부파일을 JSON 원본으로 보관하고 Markdown으로 렌더링"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "slack-sdk>=3.33",
+    "httpx>=0.27",
+    "python-dotenv>=1.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/slack_exporter"]
