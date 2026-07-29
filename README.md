@@ -39,14 +39,16 @@ uv sync
 
 ## 사용법
 
+아래에서 `dev-backend`, `general`은 백업할 채널명 예시. 채널명은 공백으로 구분해 여러 개 지정할 수 있고, `#` 접두사는 있어도 없어도 된다.
+
 ```bash
-# 1. 접근 가능한 채널 목록 확인
+# 1. 접근 가능한 채널 목록 확인 (여기 나오는 이름을 아래 명령에 사용)
 uv run main.py channels
 
 # 2. (선택) 다운로드 없이 첨부파일 용량 미리 확인
 uv run main.py estimate dev-backend general
 
-# 3. 채널 수집 (여러 개 가능) — 메시지 → 스레드 → 첨부파일 순으로 진행
+# 3. 채널 수집 — 메시지 → 스레드 → 첨부파일 순으로 진행
 uv run main.py export dev-backend general
 
 # 4. Markdown 렌더링

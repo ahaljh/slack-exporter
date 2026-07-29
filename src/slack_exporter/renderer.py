@@ -51,15 +51,12 @@ def convert_mrkdwn(text: str, users: dict[str, str], channels: dict[str, str]) -
         label = m.group(2) or channels.get(m.group(1), m.group(1))
         return f"#{label}"
 
-    def repl_link(m: re.Match) -> str:
-        url, label = m.group(1), m.group(2)
-        return f"[{label}]({url})" if label else url
-
     text = re.sub(r"<@(\w+)(?:\|[^>]*)?>", repl_user, text)
     text = re.sub(r"<#(\w+)(?:\|([^>]*))?>", repl_channel, text)
     text = re.sub(r"<!(here|channel|everyone)>", r"@\1", text)
-    text = re.sub(r"<([^>|@#!][^>|]*)\|([^>]+)>", repl_link, text)
-    text = re.sub(r"<([^>|@#!][^>|]*)>", repl_link, text)
+    # <url|라벨> → [라벨](url), <url> → url
+    text = re.sub(r"<([^>|@#!][^>|]*)\|([^>]+)>", r"[\2](\1)", text)
+    text = re.sub(r"<([^>|@#!][^>|]*)>", r"\1", text)
     # 볼드/취소선 변환 (코드 블록은 건드리지 않도록 단순 케이스만)
     text = re.sub(r"(?<![*\w])\*([^*\n]+)\*(?![*\w])", r"**\1**", text)
     text = re.sub(r"(?<![~\w])~([^~\n]+)~(?![~\w])", r"~~\1~~", text)
