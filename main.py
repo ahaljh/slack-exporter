@@ -138,7 +138,7 @@ def cmd_export(args):
 
     channels = load_channels_meta(client, args.out)
     for channel in resolve_channels(args.channels, channels):
-        export_channel(client, channel, args.out)
+        export_channel(client, channel, args.out, thread_days=args.thread_days)
 
     logger.info("\n모든 채널 수집 완료. 다음 단계: uv run main.py render %s", " ".join(args.channels))
 
@@ -186,6 +186,12 @@ def main():
 
     p = sub.add_parser("export", help="채널 메시지/스레드/첨부파일 수집")
     p.add_argument("channels", nargs="+", help="채널명 (여러 개 가능)")
+    p.add_argument(
+        "--thread-days",
+        type=int,
+        default=30,
+        help="증분 수집 시 최근 N일 구간을 다시 받아 스레드 신규 답글까지 수집 (0=끄기, 기본: 30)",
+    )
     p.set_defaults(func=cmd_export)
 
     p = sub.add_parser("render", help="수집된 JSON을 Markdown으로 렌더링")

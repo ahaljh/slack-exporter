@@ -6,11 +6,14 @@
   history → threads → files → done
 
 완료(done)된 채널에 재실행하면 마지막 타임스탬프 이후의 신규 메시지만
-증분 수집한다.
+증분 수집한다. 이때 최근 N일(thread_days) 구간은 겹쳐서 다시 받아
+기존 스레드에 나중에 달린 답글도 함께 수집한다 — 히스토리/스레드 원본은
+ts 단위로 덮어쓰거나 렌더링 시 중복 제거되므로 겹침 재수집은 안전하다.
 """
 
 import json
 import logging
+import time
 from pathlib import Path
 
 from .client import SlackClient
@@ -19,6 +22,9 @@ logger = logging.getLogger(__name__)
 
 # 요청당 최대 메시지 수 (신규 비마켓플레이스 앱은 서버가 15로 강제 축소할 수 있음)
 PAGE_LIMIT = 200
+
+# 증분 수집 시 신규 답글 확인을 위해 겹쳐서 재수집할 기간 (일)
+THREAD_RECHECK_DAYS = 30
 
 DEFAULT_STATE = {
     "phase": "history",   # history | threads | files | done
@@ -100,7 +106,12 @@ def iter_raw_messages(ch_dir: Path):
             yield from json.loads(path.read_text())
 
 
-def export_channel(client: SlackClient, channel: dict, out_root: Path) -> None:
+def export_channel(
+    client: SlackClient,
+    channel: dict,
+    out_root: Path,
+    thread_days: int = THREAD_RECHECK_DAYS,
+) -> None:
     """채널 하나를 수집 (중단 시 재개 가능)"""
     name = channel["name"]
     ch_dir = out_root / name
@@ -111,10 +122,25 @@ def export_channel(client: SlackClient, channel: dict, out_root: Path) -> None:
 
     # 완료된 채널 재실행 → 마지막 ts 이후 증분 수집으로 전환
     if state["phase"] == "done":
-        logger.info("#%s: 이전 백업 이후 신규 메시지를 증분 수집합니다", name)
         state["phase"] = "history"
         state["next_cursor"] = None
-        state["oldest"] = state["latest_ts"]
+        oldest = state["latest_ts"]
+        if oldest and thread_days > 0:
+            # 최근 구간을 겹쳐서 재수집: 부모 메시지의 reply_count가 갱신되고,
+            # 해당 구간 스레드를 완료 목록에서 빼서 신규 답글을 다시 받는다
+            cutoff = min(float(oldest), time.time() - thread_days * 86400)
+            oldest = f"{cutoff:.6f}"
+            state["threads_done"] = [
+                ts for ts in state["threads_done"] if float(ts) < cutoff
+            ]
+            logger.info(
+                "#%s: 신규 메시지 + 최근 %d일 스레드 답글을 증분 수집합니다",
+                name,
+                thread_days,
+            )
+        else:
+            logger.info("#%s: 이전 백업 이후 신규 메시지를 증분 수집합니다", name)
+        state["oldest"] = oldest
         save_state(ch_dir, state)
 
     # 공개 채널이고 아직 멤버가 아니면 자동 참여
