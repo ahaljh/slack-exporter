@@ -144,7 +144,13 @@ def export_channel(
         save_state(ch_dir, state)
 
     # 공개 채널이고 아직 멤버가 아니면 자동 참여
-    if not channel.get("is_member") and not channel.get("is_private"):
+    # (세션 토큰 방식은 본인 계정으로 공개 채널을 참여 없이 읽을 수 있고,
+    #  참여하면 다른 멤버에게 입장 메시지가 보이므로 건너뛴다)
+    if (
+        not client.is_session
+        and not channel.get("is_member")
+        and not channel.get("is_private")
+    ):
         logger.info("#%s: 봇이 채널에 참여합니다", name)
         client.call("conversations_join", channel=channel["id"])
 
@@ -155,7 +161,7 @@ def export_channel(
     if state["phase"] == "files":
         from .downloader import download_channel_files
 
-        download_channel_files(client.token, ch_dir)
+        download_channel_files(client.token, ch_dir, cookie=client.cookie)
         state["phase"] = "done"
         save_state(ch_dir, state)
 

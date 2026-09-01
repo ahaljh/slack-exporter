@@ -14,7 +14,7 @@ def sanitize_filename(name: str) -> str:
     return re.sub(r'[\\/:*?"<>|\x00-\x1f]', "_", name).strip() or "file"
 
 
-def download_channel_files(token: str, ch_dir: Path) -> None:
+def download_channel_files(token: str, ch_dir: Path, cookie: str | None = None) -> None:
     from .fetcher import iter_raw_messages
 
     files_dir = ch_dir / "files"
@@ -30,8 +30,13 @@ def download_channel_files(token: str, ch_dir: Path) -> None:
     logger.info("첨부파일 %d개 다운로드 시작", len(targets))
     downloaded = skipped = failed = 0
 
+    # 세션 토큰(xoxc) 방식은 파일 서버 인증에도 d 쿠키가 필요하다
+    headers = {"Authorization": f"Bearer {token}"}
+    if cookie:
+        headers["Cookie"] = f"d={cookie}"
+
     with httpx.Client(
-        headers={"Authorization": f"Bearer {token}"},
+        headers=headers,
         follow_redirects=True,
         timeout=60,
     ) as http:

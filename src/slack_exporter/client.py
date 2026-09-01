@@ -17,9 +17,20 @@ class SlackClient:
     대기가 길어질 수 있음을 로그로 알려준다.
     """
 
-    def __init__(self, token: str):
+    def __init__(self, token: str, cookie: str | None = None):
+        """token: xoxb-(봇) 또는 xoxc-(브라우저 세션) 토큰.
+        cookie: 세션 토큰 사용 시 필요한 d 쿠키 값 (xoxd-...)
+        """
         self.token = token
-        self._client = WebClient(token=token)
+        self.cookie = cookie
+        # 세션 토큰(xoxc)은 브라우저 로그인 세션에 묶여 있어 d 쿠키를 함께 보내야 인증된다
+        headers = {"Cookie": f"d={cookie}"} if cookie else None
+        self._client = WebClient(token=token, headers=headers)
+
+    @property
+    def is_session(self) -> bool:
+        """브라우저 세션 토큰(xoxc + 쿠키) 방식인지 여부"""
+        return self.cookie is not None
 
     def call(self, method_name: str, **params):
         while True:

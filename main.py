@@ -21,17 +21,39 @@ logger = logging.getLogger("slack-exporter")
 
 
 def get_client():
+    """.env 설정에 따라 인증 방식을 선택한다.
+
+    - SLACK_XOXC_TOKEN + SLACK_XOXD_COOKIE 둘 다 있으면 → 브라우저 세션 토큰 방식
+      (Free 플랜에서 앱 없이 사용 가능. 두 방식이 모두 설정되어 있으면 이쪽이 우선)
+    - 아니면 SLACK_BOT_TOKEN → 기존 슬랙 앱(봇 토큰) 방식
+    """
     from slack_exporter.client import SlackClient
 
     load_dotenv()
-    token = os.environ.get("SLACK_BOT_TOKEN")
-    if not token:
+    xoxc = os.environ.get("SLACK_XOXC_TOKEN")
+    xoxd = os.environ.get("SLACK_XOXD_COOKIE")
+    bot_token = os.environ.get("SLACK_BOT_TOKEN")
+
+    if xoxc and xoxd:
+        logger.info("인증: 브라우저 세션 토큰 방식 (xoxc + 쿠키)")
+        return SlackClient(xoxc, cookie=xoxd)
+    if xoxc or xoxd:
         logger.error(
-            "SLACK_BOT_TOKEN이 설정되지 않았습니다.\n"
-            ".env.example을 .env로 복사하고 토큰을 입력하세요."
+            "세션 토큰 방식은 SLACK_XOXC_TOKEN과 SLACK_XOXD_COOKIE를 "
+            "둘 다 설정해야 합니다. (하나만 설정되어 있음)"
         )
         sys.exit(1)
-    return SlackClient(token)
+    if bot_token:
+        logger.info("인증: 슬랙 앱 봇 토큰 방식 (xoxb)")
+        return SlackClient(bot_token)
+
+    logger.error(
+        "인증 정보가 설정되지 않았습니다. .env에 아래 중 한 가지를 입력하세요.\n"
+        "  - 봇 토큰 방식: SLACK_BOT_TOKEN=xoxb-...\n"
+        "  - 세션 토큰 방식: SLACK_XOXC_TOKEN=xoxc-... 와 SLACK_XOXD_COOKIE=xoxd-...\n"
+        ".env.example을 참고하세요."
+    )
+    sys.exit(1)
 
 
 def load_channels_meta(client, out_root: Path, refresh: bool = False) -> list[dict]:
