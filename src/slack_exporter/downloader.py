@@ -14,6 +14,11 @@ def sanitize_filename(name: str) -> str:
     return re.sub(r'[\\/:*?"<>|\x00-\x1f]', "_", name).strip() or "file"
 
 
+def is_canvas(f: dict) -> bool:
+    """슬랙 캔버스 여부 — 일반 파일이 아니라서 다운로드 대상에서 제외"""
+    return f.get("mode") == "quip" or f.get("mimetype") == "application/vnd.slack-docs"
+
+
 def download_channel_files(token: str, ch_dir: Path, cookie: str | None = None) -> None:
     from .fetcher import iter_raw_messages
 
@@ -24,7 +29,11 @@ def download_channel_files(token: str, ch_dir: Path, cookie: str | None = None) 
     targets: dict[str, dict] = {}
     for msg in iter_raw_messages(ch_dir):
         for f in msg.get("files", []):
-            if f.get("id") and (f.get("url_private_download") or f.get("url_private")):
+            if (
+                f.get("id")
+                and not is_canvas(f)
+                and (f.get("url_private_download") or f.get("url_private"))
+            ):
                 targets[f["id"]] = f
 
     logger.info("첨부파일 %d개 다운로드 시작", len(targets))

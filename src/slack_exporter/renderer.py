@@ -13,7 +13,7 @@ from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
-from .downloader import sanitize_filename
+from .downloader import is_canvas, sanitize_filename
 
 logger = logging.getLogger(__name__)
 
@@ -89,6 +89,9 @@ def _format_message(
     # 첨부파일: 이미지는 임베드, 나머지는 링크
     for f in msg.get("files", []):
         if not f.get("id"):
+            continue
+        # 캔버스는 첨부로 렌더링하지 않음 — 메시지 text에 이미 내용이 표시됨
+        if is_canvas(f):
             continue
         fname = f"{f['id']}_{sanitize_filename(f.get('name', 'file'))}"
         rel = f"files/{fname}"
